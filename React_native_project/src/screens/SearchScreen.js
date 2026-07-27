@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   StyleSheet,
   View,
@@ -8,10 +8,12 @@ import {
   ScrollView,
   SafeAreaView,
   Dimensions,
+  ActivityIndicator,
 } from 'react-native';
 import { COLORS, TYPOGRAPHY, SHADOWS } from '../theme/theme';
 import { useNavigation } from '../navigation/NavigationContext';
 import { MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
+import { api } from '../services/api';
 
 const { width } = Dimensions.get('window');
 
@@ -93,15 +95,54 @@ export default function SearchScreen() {
   const [destination, setDestination] = useState('Chromepet');
   const [activeInput, setActiveInput] = useState(null); // 'source' or 'destination'
   const [searched, setSearched] = useState(true);
+  const [gates, setGates] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const getRouteKey = () => {
-    if (source && destination) {
-      return `${source}-${destination}`;
-    }
-    return '';
-  };
+  useEffect(() => {
+    const loadGates = async () => {
+      try {
+        const response = await api.gates.list();
+        if (response.data?.success) {
+          setGates(response.data.data);
+        }
+      } catch (error) {
+        console.warn('Failed to load live gates:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const routeResults = ROUTE_RESULTS[getRouteKey()] || ROUTE_RESULTS['Tambaram-Chromepet'];
+    loadGates();
+  }, []);
+
+  const searchTerms = [source, destination]
+    .map((value) => value.trim().toLowerCase())
+    .filter(Boolean);
+  const routeResults = gates
+    .filter((gate) => {
+      if (searchTerms.length === 0) return true;
+      const gateText = [gate.gateName, gate.gateCode, gate.address, gate.city, gate.state]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+
+      return searchTerms.some((term) => gateText.includes(term));
+    })
+    .map((gate) => ({
+      id: gate._id,
+      name: gate.gateName,
+      status: gate.currentStatus || 'UNKNOWN',
+      distance: [gate.address, gate.city].filter(Boolean).join(', ') || gate.gateCode,
+      waitingTime: gate.currentStatus === 'OPEN' ? 'Open for road traffic' : 'Live status update',
+      nextTrain: gate.currentDevice?.deviceCode
+        ? `Sensor ${gate.currentDevice.deviceCode} reporting`
+        : 'No active sensor details',
+      color: gate.currentStatus === 'OPEN'
+        ? COLORS.success
+        : gate.currentStatus === 'CLOSED'
+        ? COLORS.accent
+        : COLORS.warning,
+    }));
 
   const selectStation = (station) => {
     if (activeInput === 'source') {
@@ -201,14 +242,18 @@ export default function SearchScreen() {
       {searched && !activeInput && (
         <ScrollView contentContainerStyle={styles.resultsScroll} showsVerticalScrollIndicator={false}>
           <Text style={styles.resultTitle}>Route Summary</Text>
-          <Text style={styles.resultSubtitle}>
-            We found {routeResults.length} level crossing gates between {source} and {destination}.
-          </Text>
+          <Text style={styles.resultSubtitle}>Live status for registered level crossings matching {source || 'your search'} and {destination || 'your search'}.</Text>
 
-          {/* Map/Timeline Graphic */}
-          <View style={styles.timelineCard}>
-            <View style={styles.timelineList}>
-              {routeResults.map((gate, index) => (
+          {loading ? (
+            <ActivityIndicator color="#7C3AED" style={{ marginTop: 28 }} />
+          ) : routeResults.length === 0 ? (
+            <View style={styles.timelineCard}>
+              <Text style={styles.gateDetailsText}>No live gates match this search. Try a gate name, code, city, or state.</Text>
+            </View>
+          ) : (
+            <View style={styles.timelineCard}>
+              <View style={styles.timelineList}>
+                {routeResults.map((gate, index) => (
                 <View key={gate.id} style={styles.timelineItem}>
                   {/* Left Column: Icon/Line */}
                   <View style={styles.timelineLineContainer}>
@@ -265,9 +310,10 @@ export default function SearchScreen() {
                     </View>
                   </TouchableOpacity>
                 </View>
-              ))}
+                ))}
+              </View>
             </View>
-          </View>
+          )}
         </ScrollView>
       )}
     </SafeAreaView>

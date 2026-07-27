@@ -14,8 +14,7 @@ import {
 import { COLORS, TYPOGRAPHY, SHADOWS } from '../theme/theme';
 import { useNavigation } from '../navigation/NavigationContext';
 import { MaterialIcons, FontAwesome5, Feather } from '@expo/vector-icons';
-import { cookieManager } from '../utils/cookieManager';
-import apiClient from '../services/api';
+import { api } from '../services/api';
 
 export default function ProfileScreen() {
   const { reset } = useNavigation();
@@ -28,10 +27,7 @@ export default function ProfileScreen() {
   const [loading, setLoading] = useState(true);
 
   // Saved routes dummy data
-  const [savedRoutes, setSavedRoutes] = useState([
-    { id: 1, from: 'Tambaram', to: 'Chromepet', alertsEnabled: true },
-    { id: 2, from: 'Pallavaram', to: 'Guindy', alertsEnabled: false },
-  ]);
+  const [savedRoutes, setSavedRoutes] = useState([]);
 
   // Travel history dummy data
   const travelHistory = [
@@ -46,12 +42,18 @@ export default function ProfileScreen() {
   const fetchProfile = async () => {
     try {
       setLoading(true);
-      const response = await apiClient.get('/api/users/profile');
+      const response = await api.users.getProfile();
       if (response.data.success) {
         const user = response.data.data;
         setFullName(user.name || '');
         setEmail(user.email || '');
         setPhone(user.phone || '');
+        setSavedRoutes((user.favouriteGates || []).map((gate) => ({
+          id: gate._id || gate,
+          from: gate.gateName || gate.gateCode || 'Saved gate',
+          to: gate.address || gate.city || 'Railway crossing',
+          alertsEnabled: user.notificationEnabled !== false,
+        })));
       }
     } catch (error) {
       console.error('Failed to fetch profile:', error);
@@ -73,10 +75,9 @@ export default function ProfileScreen() {
 
     try {
       setLoading(true);
-      const response = await apiClient.patch('/api/users/profile', {
+      const response = await api.users.updateProfile({
         name: fullName.trim(),
         email: email.trim(),
-        phone: phone.trim(),
       });
 
       if (response.data.success) {
@@ -92,19 +93,12 @@ export default function ProfileScreen() {
   };
 
   const handleLogout = async () => {
-    await cookieManager.clearCookie('session_token');
+    await api.auth.logout();
     reset('LOGIN');
   };
 
   const handleDeleteAccount = () => {
-    Alert.alert(
-      'Delete Account',
-      'Are you sure you want to permanently delete your TrainGateView account? This action cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Delete', style: 'destructive', onPress: () => reset('LOGIN') },
-      ]
-    );
+    Alert.alert('Account deletion unavailable', 'The backend does not provide an account deletion endpoint yet.');
   };
 
   if (loading && !isEditing) {
@@ -177,8 +171,8 @@ export default function ProfileScreen() {
               <TextInput
                 style={styles.infoInput}
                 value={phone}
-                onChangeText={setPhone}
                 keyboardType="phone-pad"
+                editable={false}
               />
             ) : (
               <Text style={styles.infoValue}>{phone}</Text>

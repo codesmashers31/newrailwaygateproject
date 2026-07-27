@@ -18,18 +18,7 @@ import { COLORS, TYPOGRAPHY, SHADOWS } from '../theme/theme';
 import { useNavigation } from '../navigation/NavigationContext';
 import { MaterialIcons, FontAwesome5, Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import apiClient from '../services/api';
-import { cookieManager } from '../utils/cookieManager';
-
-// Dynamic import of WebView to prevent crash on web
-let WebView = null;
-if (Platform.OS !== 'web') {
-  try {
-    WebView = require('react-native-webview').WebView;
-  } catch (e) {
-    console.warn('WebView could not be loaded:', e);
-  }
-}
+import { api } from '../services/api';
 
 const { width, height } = Dimensions.get('window');
 const isSmallScreen = width < 375;
@@ -51,12 +40,6 @@ export default function LoginScreen() {
   const [successMsg, setSuccessMsg] = useState('');
   const [isInputFocused, setIsInputFocused] = useState(false);
   const [focusedOtpIdx, setFocusedOtpIdx] = useState(-1);
-
-  // Google OAuth states
-  const [showGoogleWebView, setShowGoogleWebView] = useState(false);
-  const [oauthUrl, setOauthUrl] = useState('');
-
-  const inputType = 'email'; // Always email
 
   // Animation values
   const otpAnim = useRef(new Animated.Value(0)).current;
@@ -82,20 +65,16 @@ export default function LoginScreen() {
   useEffect(() => {
     const checkExistingSession = async () => {
       try {
-        const token = await cookieManager.getCookie('session_token');
-        if (token) {
+        if (await api.auth.hasSession()) {
           setLoading(true);
-          // Optional API check to confirm validity
-          const response = await apiClient.get('/api/auth/validate-token', {
-            headers: { Authorization: `Bearer ${token}` },
-          });
-          if (response.data && response.data.valid) {
+          const response = await api.auth.me();
+          if (response.data?.success) {
             navigate('MAIN');
           }
         }
       } catch (err) {
         console.log('Session validation failed, user must log in again.');
-        await cookieManager.clearCookie('session_token');
+        await api.auth.clearSession();
       } finally {
         setLoading(false);
       }
@@ -104,8 +83,8 @@ export default function LoginScreen() {
   }, []);
 
   // Validation functions
-  const validateEmail = (email) => {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  const validatePhone = (phone) => {
+    return phone.replace(/\D/g, '').length >= 10;
   };
 
   // Handler for sending OTP
@@ -115,12 +94,12 @@ export default function LoginScreen() {
     const inputClean = loginInput.trim();
 
     if (!inputClean) {
-      setErrorMsg('Please enter an Email Address.');
+      setErrorMsg('Please enter your mobile number.');
       return;
     }
 
-    if (!validateEmail(inputClean)) {
-      setErrorMsg('Please enter a valid email address format.');
+    if (!validatePhone(inputClean)) {
+      setErrorMsg('Please enter a valid mobile number.');
       return;
     }
 
@@ -132,16 +111,14 @@ export default function LoginScreen() {
         Animated.spring(logoScale, { toValue: 1, friction: 3, useNativeDriver: true }),
       ]).start();
 
-      const response = await apiClient.post('/api/auth/login', {
-        email: inputClean,
-      });
+      const response = await api.auth.login(inputClean);
 
       if (response.data.success) {
         setOtpSent(true);
         setCountdown(60);
         
         // Set user feedback message
-        setSuccessMsg('OTP sent! Please check your email inbox.');
+        setSuccessMsg('OTP generated. Enter the 6-digit code to continue.');
 
         // Smoothly animate in the OTP section
         Animated.spring(otpAnim, {
@@ -206,18 +183,11 @@ export default function LoginScreen() {
 
     try {
       setVerifying(true);
-      const response = await apiClient.post('/api/auth/verify-otp', {
-        email: loginInput.trim(),
-        otp: fullOtp,
-      });
+      const response = await api.auth.verifyOtp(loginInput.trim(), fullOtp);
 
       if (response.data.success) {
         setSuccessMsg('Verification successful! Access granted.');
         
-        // Save secure token for 7 days
-        const token = response.data.data.accessToken;
-        await cookieManager.setCookie('session_token', token, 7);
-
         // Redirect after a brief delay for user feedback
         setTimeout(() => {
           navigate('MAIN');
@@ -237,64 +207,7 @@ export default function LoginScreen() {
   };
 
   const handleGoogleLogin = async () => {
-    setErrorMsg('');
-    setSuccessMsg('');
-    const authUrl = `${apiClient.defaults.baseURL}/auth/google`;
-
-    if (Platform.OS === 'web') {
-      // 1. Web Popup Flow
-      const width = 500;
-      const height = 600;
-      const left = window.screen.width / 2 - width / 2;
-      const top = window.screen.height / 2 - height / 2;
-      
-      const popup = window.open(
-        authUrl,
-        'Google OAuth',
-        `width=${width},height=${height},left=${left},top=${top},status=no,resizable=yes`
-      );
-
-      // Listen to postMessage event from the popup window
-      const messageListener = async (event) => {
-        if (event.data && event.data.success && event.data.token) {
-          const { token } = event.data;
-          setSuccessMsg('Google Login successful!');
-          await cookieManager.setCookie('session_token', token, 7);
-          
-          window.removeEventListener('message', messageListener);
-          setTimeout(() => {
-            navigate('MAIN');
-          }, 1000);
-        }
-      };
-
-      window.addEventListener('message', messageListener);
-    } else {
-      // 2. Mobile WebView Flow
-      setOauthUrl(authUrl);
-      setShowGoogleWebView(true);
-    }
-  };
-
-  const handleWebViewMessage = async (event) => {
-    try {
-      const data = JSON.parse(event.nativeEvent.data);
-      if (data && data.success && data.token) {
-        setShowGoogleWebView(false);
-        setSuccessMsg('Google Login successful!');
-        await cookieManager.setCookie('session_token', data.token, 7);
-        
-        setTimeout(() => {
-          navigate('MAIN');
-        }, 1000);
-      }
-    } catch (err) {
-      console.warn('Failed to parse WebView message:', err);
-    }
-  };
-
-  const closeWebView = () => {
-    setShowGoogleWebView(false);
+    setErrorMsg('Google sign-in is not enabled on the backend yet. Use mobile OTP to continue.');
   };
 
   // Interpolated animation styles
@@ -306,27 +219,6 @@ export default function LoginScreen() {
     inputRange: [0, 1],
     outputRange: [0.93, 1],
   });
-
-  if (showGoogleWebView && WebView) {
-    return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: '#0C0E24' }}>
-        <View style={{ height: 50, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: '#1E293B' }}>
-          <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700' }}>Google Authentication</Text>
-          <TouchableOpacity onPress={closeWebView} style={{ padding: 6, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 12 }}>
-            <Feather name="x" size={20} color="#fff" />
-          </TouchableOpacity>
-        </View>
-        <WebView 
-          source={{ uri: oauthUrl }}
-          onMessage={handleWebViewMessage}
-          style={{ flex: 1 }}
-          javaScriptEnabled
-          domStorageEnabled
-          incognito={true}
-        />
-      </SafeAreaView>
-    );
-  }
 
   return (
     <LinearGradient
@@ -381,26 +273,26 @@ export default function LoginScreen() {
                 </View>
               ) : null}
 
-              {/* Identifier Input (Email Address) */}
+              {/* Identifier Input */}
               <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Email Address</Text>
+                <Text style={styles.inputLabel}>Mobile Number</Text>
                 <View 
                   style={[
                     styles.inputBox, 
                     otpSent && styles.inputBoxDisabled
                   ]}
                 >
-                  <Feather name="mail" size={18} color="#818CF8" style={styles.inputIcon} />
+                    <Feather name="phone" size={18} color="#818CF8" style={styles.inputIcon} />
                   
                   <TextInput
                     style={[styles.textInput, otpSent && { color: 'rgba(255, 255, 255, 0.4)' }]}
-                    placeholder="Enter your email address"
+                    placeholder="Enter your mobile number"
                     placeholderTextColor="rgba(255, 255, 255, 0.25)"
                     value={loginInput}
                     onChangeText={(text) => {
                       if (!otpSent) setLoginInput(text);
                     }}
-                    keyboardType="email-address"
+                    keyboardType="phone-pad"
                     autoCapitalize="none"
                     autoCorrect={false}
                     editable={!otpSent}
@@ -550,7 +442,9 @@ export default function LoginScreen() {
                 <Text style={styles.googleBtnText}>Continue with Google</Text>
               </TouchableOpacity>
 
-              {/* Sign up link prompt removed */}
+              <TouchableOpacity onPress={() => navigate('REGISTER')} style={{ marginTop: 20, alignItems: 'center' }}>
+                <Text style={{ color: '#C4B5FD', fontSize: 13, fontWeight: '700' }}>New here? Create an account</Text>
+              </TouchableOpacity>
             </View>
           </ScrollView>
         </KeyboardAvoidingView>

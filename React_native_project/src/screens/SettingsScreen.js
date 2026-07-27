@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   StyleSheet,
   View,
@@ -12,6 +12,7 @@ import {
 import { COLORS, TYPOGRAPHY, SHADOWS } from '../theme/theme';
 import { useNavigation } from '../navigation/NavigationContext';
 import { MaterialIcons, FontAwesome5, Feather } from '@expo/vector-icons';
+import { api } from '../services/api';
 
 // Translations dictionary
 const TRANSLATIONS = {
@@ -73,6 +74,21 @@ export default function SettingsScreen() {
   const [gpsAccuracy, setGpsAccuracy] = useState('High Precision'); // High Precision / Balanced
   const [refreshInterval, setRefreshInterval] = useState('Every 30s'); // 30s / 1m
 
+  useEffect(() => {
+    const loadNotificationPreference = async () => {
+      try {
+        const response = await api.users.getProfile();
+        if (response.data?.success) {
+          setReceiveWarnings(response.data.data.notificationEnabled !== false);
+        }
+      } catch (error) {
+        console.warn('Failed to load notification preference:', error);
+      }
+    };
+
+    loadNotificationPreference();
+  }, []);
+
   // Dynamic Theme Palette to make theme switch work
   const theme = {
     background: isDarkMode ? '#0B0F19' : '#F8FAFC',
@@ -100,6 +116,22 @@ export default function SettingsScreen() {
     const nextInterval = refreshInterval === 'Every 30s' ? 'Every 1m' : 'Every 30s';
     setRefreshInterval(nextInterval);
     Alert.alert('Refresh Rate Changed', `Gate status auto-refreshes: ${nextInterval}`);
+  };
+
+  const handleNotificationToggle = async (enabled) => {
+    const previousValue = receiveWarnings;
+    setReceiveWarnings(enabled);
+
+    try {
+      if (enabled) {
+        await api.users.enableNotifications();
+      } else {
+        await api.users.disableNotifications();
+      }
+    } catch (error) {
+      setReceiveWarnings(previousValue);
+      Alert.alert('Update failed', error.response?.data?.message || 'Could not update notification settings.');
+    }
   };
 
   const t = TRANSLATIONS[language];
@@ -174,7 +206,7 @@ export default function SettingsScreen() {
             </View>
             <Switch
               value={receiveWarnings}
-              onValueChange={setReceiveWarnings}
+              onValueChange={handleNotificationToggle}
               trackColor={{ false: '#E2E8F0', true: '#0F766E' }}
             />
           </View>

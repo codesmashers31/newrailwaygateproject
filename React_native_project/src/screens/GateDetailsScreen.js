@@ -10,7 +10,7 @@ import {
   Dimensions,
   ActivityIndicator,
 } from 'react-native';
-import apiClient from '../services/api';
+import { api } from '../services/api';
 import { COLORS, TYPOGRAPHY, SHADOWS } from '../theme/theme';
 import { useNavigation } from '../navigation/NavigationContext';
 import { MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
@@ -69,24 +69,29 @@ const GATE_DATA = {
 
 export default function GateDetailsScreen() {
   const { params, goBack } = useNavigation();
-  const gateId = params.gateId || 'lc-22';
+  const gateId = params.gateId;
 
   const [gateDetails, setGateDetails] = useState(null);
+  const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [alertMinutes, setAlertMinutes] = useState(5);
+  const [alertEnabled, setAlertEnabled] = useState(true);
+  const trainAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     let active = true;
     const fetchDetails = async () => {
       try {
         setLoading(true);
-        // If gateId is mock (starts with 'lc-'), skip backend lookup and use mock data
-        if (gateId.startsWith('lc-')) {
-          setLoading(false);
-          return;
+        const [detailsResponse, historyResponse] = await Promise.all([
+          api.gates.getById(gateId),
+          api.gates.getHistory(gateId),
+        ]);
+        if (detailsResponse.data.success && active) {
+          setGateDetails(detailsResponse.data.data);
         }
-        const response = await apiClient.get(`/api/gates/${gateId}`);
-        if (response.data.success && active) {
-          setGateDetails(response.data.data);
+        if (historyResponse.data.success && active) {
+          setHistory(historyResponse.data.data);
         }
       } catch (err) {
         console.warn('Failed to fetch gate details:', err);
@@ -100,8 +105,7 @@ export default function GateDetailsScreen() {
     // Polling status
     const interval = setInterval(async () => {
       try {
-        if (gateId.startsWith('lc-')) return;
-        const statusRes = await apiClient.get(`/api/gates/${gateId}/current-status`);
+        const statusRes = await api.gates.getCurrentStatus(gateId);
         if (statusRes.data.success && active) {
           setGateDetails(prev => prev ? {
             ...prev,
@@ -114,7 +118,7 @@ export default function GateDetailsScreen() {
       } catch (err) {
         console.warn('Status poll failed:', err);
       }
-    }, 10000);
+    }, 30000);
 
     return () => {
       active = false;
@@ -122,7 +126,6 @@ export default function GateDetailsScreen() {
     };
   }, [gateId]);
 
-  const fallbackData = GATE_DATA[gateId] || GATE_DATA['lc-22'];
   const data = gateDetails ? {
     id: gateDetails._id,
     name: gateDetails.gateName,
@@ -133,33 +136,23 @@ export default function GateDetailsScreen() {
       : gateDetails.currentStatus === 'CLOSED' 
       ? 'Closed for train passing' 
       : 'Status unknown',
-    timerText: gateDetails.currentStatus === 'OPEN' ? 'Open' : '02:30',
-    trainName: gateDetails.trainName || 'No trains in proximity',
-    trainSpeed: gateDetails.trainSpeed || '0 km/h',
-    trainDistance: gateDetails.trainDistance || 'N/A',
-    avgWait: gateDetails.avgWait || '5m 00s',
-    dailyClosures: gateDetails.dailyClosures || '20 times',
-    alternatives: fallbackData.alternatives || [],
-  } : fallbackData;
-
-  if (loading && !gateDetails && !gateId.startsWith('lc-')) {
-    return (
-      <SafeAreaView style={[styles.container, { justifyContent: 'center', alignItems: 'center', backgroundColor: '#F8FAFC' }]}>
-        <ActivityIndicator size="large" color="#7C3AED" />
-        <Text style={{ marginTop: 12, color: '#64748B', fontWeight: '600' }}>Loading crossing details...</Text>
-      </SafeAreaView>
-    );
-  }
-
-  const [alertMinutes, setAlertMinutes] = useState(5);
-  const [alertEnabled, setAlertEnabled] = useState(true);
-
-  // Train animation positioning
-  const trainAnim = useRef(new Animated.Value(0)).current;
+    timerText: gateDetails.currentStatus === 'OPEN'
+      ? 'Open'
+      : gateDetails.lastStatusChangedAt
+      ? new Date(gateDetails.lastStatusChangedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      : 'Live',
+    trainName: gateDetails.currentDevice?.deviceCode
+      ? `Sensor ${gateDetails.currentDevice.deviceCode} is reporting`
+      : 'No linked sensor telemetry',
+    trainSpeed: 'Live status',
+    trainDistance: 'Not available',
+    avgWait: 'Not available',
+    dailyClosures: `${history.length} recent events`,
+    alternatives: [],
+  } : null;
 
   useEffect(() => {
-    if (data.status !== 'OPEN') {
-      // Loop the train moving across the screen
+    if (data?.status !== 'OPEN') {
       Animated.loop(
         Animated.sequence([
           Animated.timing(trainAnim, {
@@ -175,9 +168,41 @@ export default function GateDetailsScreen() {
         ])
       ).start();
     }
-  }, [gateId]);
+  }, [data?.status, trainAnim]);
 
-  // Interpolate train position (left margin percentage)
+  const handleAlertToggle = async () => {
+    const nextValue = !alertEnabled;
+    setAlertEnabled(nextValue);
+
+    try {
+      if (nextValue) {
+        await api.users.enableNotifications();
+      } else {
+        await api.users.disableNotifications();
+      }
+    } catch (error) {
+      setAlertEnabled(!nextValue);
+      console.warn('Failed to update notification preference:', error);
+    }
+  };
+
+  if (loading) {
+    return (
+      <SafeAreaView style={[styles.container, { justifyContent: 'center', alignItems: 'center', backgroundColor: '#F8FAFC' }]}>
+        <ActivityIndicator size="large" color="#7C3AED" />
+        <Text style={{ marginTop: 12, color: '#64748B', fontWeight: '600' }}>Loading crossing details...</Text>
+      </SafeAreaView>
+    );
+  }
+
+  if (!data) {
+    return (
+      <SafeAreaView style={[styles.container, { justifyContent: 'center', alignItems: 'center', backgroundColor: '#F8FAFC' }]}>
+        <Text style={{ color: '#64748B', fontWeight: '600' }}>Gate details are not available.</Text>
+      </SafeAreaView>
+    );
+  }
+
   const trainPositionLeft = trainAnim.interpolate({
     inputRange: [0, 1],
     outputRange: ['0%', '90%'],
@@ -192,7 +217,7 @@ export default function GateDetailsScreen() {
           <Text style={styles.backBtnText}>Back</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Crossing Details</Text>
-        <TouchableOpacity style={styles.bellBtn} onPress={() => setAlertEnabled(!alertEnabled)}>
+        <TouchableOpacity style={styles.bellBtn} onPress={handleAlertToggle}>
           <MaterialIcons
             name={alertEnabled ? 'notifications-active' : 'notifications-none'}
             size={22}
@@ -315,7 +340,7 @@ export default function GateDetailsScreen() {
 
           <TouchableOpacity
             style={[styles.alertConfigToggle, alertEnabled && styles.alertConfigToggleActive]}
-            onPress={() => setAlertEnabled(!alertEnabled)}
+            onPress={handleAlertToggle}
           >
             <MaterialIcons
               name={alertEnabled ? 'notifications-active' : 'notifications-off'}

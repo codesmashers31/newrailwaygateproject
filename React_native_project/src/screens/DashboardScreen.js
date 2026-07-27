@@ -18,8 +18,7 @@ import { useNavigation } from '../navigation/NavigationContext';
 import { MaterialIcons, FontAwesome5, Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Location from 'expo-location';
-import { cookieManager } from '../utils/cookieManager';
-import apiClient from '../services/api';
+import { api } from '../services/api';
 
 // Dynamically import WebView for native platforms to prevent crash on web
 let WebView = null;
@@ -199,12 +198,17 @@ export default function DashboardScreen({ onNotificationPress }) {
   const [gatesList, setGatesList] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
   const [userName, setUserName] = useState('Rahul Sharma');
+  const [favouriteGateIds, setFavouriteGateIds] = useState([]);
 
   const fetchProfile = async () => {
     try {
-      const response = await apiClient.get('/api/users/profile');
+      const response = await api.users.getProfile();
       if (response.data.success) {
-        setUserName(response.data.data.name || 'User');
+        const user = response.data.data;
+        const favouriteIds = (user.favouriteGates || []).map((gate) => gate._id || gate);
+        setUserName(user.name || 'User');
+        setFavouriteGateIds(favouriteIds);
+        setDefaultGateId(favouriteIds[0] || null);
       }
     } catch (error) {
       console.warn('Failed to fetch profile in dashboard:', error);
@@ -213,7 +217,7 @@ export default function DashboardScreen({ onNotificationPress }) {
 
   const fetchGates = async () => {
     try {
-      const response = await apiClient.get('/api/gates');
+      const response = await api.gates.list();
       if (response.data.success) {
         setGatesList(response.data.data);
       }
@@ -231,6 +235,9 @@ export default function DashboardScreen({ onNotificationPress }) {
   useEffect(() => {
     fetchGates();
     fetchProfile();
+    const interval = setInterval(fetchGates, 30000);
+
+    return () => clearInterval(interval);
   }, []);
 
   // Map & Location states
@@ -242,29 +249,17 @@ export default function DashboardScreen({ onNotificationPress }) {
   const [loadingLocation, setLoadingLocation] = useState(true);
   const [defaultGateId, setDefaultGateId] = useState(null);
 
-  // Load default gate ID on mount
-  useEffect(() => {
-    const loadDefaultGate = async () => {
-      try {
-        const savedId = await cookieManager.getCookie('default_gate_id');
-        if (savedId) {
-          setDefaultGateId(savedId);
-        }
-      } catch (err) {
-        console.warn('Failed to load default gate: ', err);
-      }
-    };
-    loadDefaultGate();
-  }, []);
-
-  // Save default gate ID
   const handleSetDefaultGate = async (gateId) => {
     try {
-      await cookieManager.setCookie('default_gate_id', gateId, 365); // Store for 1 year
+      const updatedFavouriteIds = [
+        gateId,
+        ...favouriteGateIds.filter((favouriteGateId) => favouriteGateId !== gateId),
+      ];
+      await api.users.updateFavouriteGates(updatedFavouriteIds);
+      setFavouriteGateIds(updatedFavouriteIds);
       setDefaultGateId(gateId);
     } catch (err) {
-      // If cookieManager itself or global fallback throws, fallback to setting state
-      setDefaultGateId(gateId);
+      console.warn('Failed to save favourite gate:', err);
     }
   };
 
@@ -534,8 +529,7 @@ export default function DashboardScreen({ onNotificationPress }) {
   );
 
   // Compute nearby gates based on current coordinates, sorted by proximity
-  // Fallback to ALL_GATES mock so layout never breaks
-  const activeGates = gatesList.length > 0 ? gatesList : ALL_GATES;
+  const activeGates = gatesList;
 
   const nearbyGates = activeGates.map((gate) => {
     const dist = getDistance(coords.latitude, coords.longitude, gate.latitude, gate.longitude);
@@ -793,7 +787,12 @@ export default function DashboardScreen({ onNotificationPress }) {
           </Text>
         </View>
 
-        {filteredGates.map((gate) => {
+        {filteredGates.length === 0 ? (
+          <View style={[styles.gateCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
+            <Text style={[styles.gateCardName, { color: theme.textPrimary }]}>No live gates found</Text>
+            <Text style={[styles.gateCardSub, { color: theme.textSecondary }]}>Pull down to refresh the registered railway gates.</Text>
+          </View>
+        ) : filteredGates.map((gate) => {
           const isDefault = defaultGateId === gate.id;
           return (
             <View

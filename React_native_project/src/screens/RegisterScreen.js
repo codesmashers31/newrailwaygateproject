@@ -17,7 +17,7 @@ import { COLORS, TYPOGRAPHY, SHADOWS } from '../theme/theme';
 import { useNavigation } from '../navigation/NavigationContext';
 import { MaterialIcons, FontAwesome5, Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import apiClient from '../services/api';
+import { api } from '../services/api';
 
 const { width, height } = Dimensions.get('window');
 const isSmallScreen = width < 375;
@@ -27,13 +27,13 @@ export default function RegisterScreen() {
   const { navigate } = useNavigation();
 
   // Pre-filled dummy data for easy user verification
-  const [firstName, setFirstName] = useState('Rahul');
-  const [lastName, setLastName] = useState('Sharma');
-  const [phone, setPhone] = useState('+91 9876543210');
-  const [email, setEmail] = useState('rahul.sharma@example.com');
-  const [verificationCode, setVerificationCode] = useState('1234');
-  const [password, setPassword] = useState('password123');
-  const [confirmPassword, setConfirmPassword] = useState('password123');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
+  const [verificationCode, setVerificationCode] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   
   const [showPassword, setShowPassword] = useState(false);
   const [isCodeSent, setIsCodeSent] = useState(false);
@@ -55,14 +55,15 @@ export default function RegisterScreen() {
     }
 
     setIsCodeSent(true);
-    setSuccessMsg('Verification code sent! (Use code: 1234)');
+    setIsVerified(true);
+    setSuccessMsg('Email will be saved with your account.');
   };
 
   const handleVerifyCode = () => {
     setErrorMsg('');
     setSuccessMsg('');
 
-    if (verificationCode === '1234') {
+    if (verificationCode.trim()) {
       setIsVerified(true);
       setSuccessMsg('Email verified successfully! ✓');
     } else {
@@ -74,34 +75,19 @@ export default function RegisterScreen() {
     setErrorMsg('');
     setSuccessMsg('');
 
-    if (!firstName || !lastName || !phone || !email || !password || !confirmPassword) {
-      setErrorMsg('Please fill in all required fields.');
+    if (!firstName || !lastName || !phone) {
+      setErrorMsg('First name, last name, and mobile number are required.');
       return;
     }
 
-    if (!email.includes('@')) {
+    if (email && !email.includes('@')) {
       setErrorMsg('Invalid email format.');
-      return;
-    }
-
-    if (!isVerified) {
-      setErrorMsg('Please verify your email before registering.');
-      return;
-    }
-
-    if (password.length < 6) {
-      setErrorMsg('Password must be at least 6 characters.');
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      setErrorMsg('Passwords do not match.');
       return;
     }
 
     try {
       setSuccessMsg('Creating account...');
-      const response = await apiClient.post('/api/auth/register', {
+      const response = await api.auth.register({
         name: `${firstName} ${lastName}`,
         phone: phone.trim(),
         email: email.trim(),

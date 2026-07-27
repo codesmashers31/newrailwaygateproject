@@ -2,8 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { StyleSheet, View, Image, Text, Animated, Dimensions } from 'react-native';
 import { COLORS, TYPOGRAPHY } from '../theme/theme';
 import { useNavigation } from '../navigation/NavigationContext';
-import { cookieManager } from '../utils/cookieManager';
-import apiClient from '../services/api';
+import { api } from '../services/api';
 
 const { width } = Dimensions.get('window');
 
@@ -47,19 +46,16 @@ export default function SplashScreen() {
         // Check session and automatically log in if valid token is found
         const checkSessionAndNavigate = async () => {
           try {
-            const token = await cookieManager.getCookie('session_token');
-            if (token) {
-              const response = await apiClient.get('/api/auth/validate-token', {
-                headers: { Authorization: `Bearer ${token}` }
-              });
-              if (response.data && response.data.valid) {
+            if (await api.auth.hasSession()) {
+              const response = await api.auth.me();
+              if (response.data?.success) {
                 navigate('MAIN');
                 return;
               }
             }
           } catch (e) {
             console.log('SplashScreen: Session auto-login check failed:', e);
-            await cookieManager.clearCookie('session_token');
+            await api.auth.clearSession();
           }
           // Default fallback to onboarding/login
           navigate('ONBOARDING');

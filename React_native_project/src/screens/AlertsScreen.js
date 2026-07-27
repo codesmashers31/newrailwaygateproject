@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   StyleSheet,
   View,
@@ -11,6 +11,7 @@ import {
 import { COLORS, TYPOGRAPHY, SHADOWS } from '../theme/theme';
 import { useNavigation } from '../navigation/NavigationContext';
 import { MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
+import { api } from '../services/api';
 
 const ALERTS_HISTORY = [
   {
@@ -51,6 +52,30 @@ const ALERTS_HISTORY = [
   },
 ];
 
+const formatNotificationTime = (timestamp) => {
+  const elapsedMinutes = Math.max(0, Math.floor((Date.now() - new Date(timestamp).getTime()) / 60000));
+
+  if (elapsedMinutes < 1) return 'Just now';
+  if (elapsedMinutes < 60) return `${elapsedMinutes} min ago`;
+  if (elapsedMinutes < 1440) return `${Math.floor(elapsedMinutes / 60)} hr ago`;
+  return `${Math.floor(elapsedMinutes / 1440)} days ago`;
+};
+
+const mapNotification = (notification) => {
+  const isAlert = notification.type === 'ALERT';
+  const isOpen = /open/i.test(`${notification.title} ${notification.message}`);
+
+  return {
+    id: notification._id,
+    gate: notification.railwayGate?.gateName || notification.railwayGate?.gateCode || notification.title || 'System update',
+    time: formatNotificationTime(notification.createdAt || notification.sentAt),
+    message: notification.message,
+    icon: isAlert ? 'warning' : isOpen ? 'lock-open' : 'lock',
+    color: isAlert ? COLORS.warning : isOpen ? COLORS.success : COLORS.accent,
+    isRead: notification.isRead,
+  };
+};
+
 export default function AlertsScreen() {
   const { isDarkMode } = useNavigation();
 
@@ -68,11 +93,43 @@ export default function AlertsScreen() {
   const [smartAlerts, setSmartAlerts] = useState(true);
   const [voiceAlerts, setVoiceAlerts] = useState(false);
   const [nearbyGatesOnly, setNearbyGatesOnly] = useState(true);
-  const [alerts, setAlerts] = useState(ALERTS_HISTORY);
+  const [alerts, setAlerts] = useState([]);
 
-  // Clear all logs
-  const handleClearAll = () => {
-    setAlerts([]);
+  const loadNotifications = async () => {
+    try {
+      const response = await api.notifications.list();
+      if (response.data?.success) {
+        setAlerts(response.data.data.map(mapNotification));
+      }
+    } catch (error) {
+      console.warn('Failed to load notifications:', error);
+    }
+  };
+
+  useEffect(() => {
+    loadNotifications();
+  }, []);
+
+  const handleClearAll = async () => {
+    try {
+      await Promise.all(alerts.map((alert) => api.notifications.remove(alert.id)));
+      setAlerts([]);
+    } catch (error) {
+      console.warn('Failed to clear notifications:', error);
+    }
+  };
+
+  const handleAlertPress = async (alert) => {
+    if (alert.isRead) return;
+
+    try {
+      await api.notifications.markRead(alert.id);
+      setAlerts((currentAlerts) => currentAlerts.map((currentAlert) => (
+        currentAlert.id === alert.id ? { ...currentAlert, isRead: true } : currentAlert
+      )));
+    } catch (error) {
+      console.warn('Failed to mark notification as read:', error);
+    }
   };
 
   return (
@@ -138,7 +195,11 @@ export default function AlertsScreen() {
             </View>
           ) : (
             alerts.map((item) => (
-              <View key={item.id} style={[styles.logCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
+              <TouchableOpacity
+                key={item.id}
+                style={[styles.logCard, { backgroundColor: theme.card, borderColor: theme.border, opacity: item.isRead ? 0.7 : 1 }]}
+                onPress={() => handleAlertPress(item)}
+              >
                 <View style={[styles.iconBox, { backgroundColor: item.color + '15' }]}>
                   <MaterialIcons name={item.icon} size={20} color={item.color} />
                 </View>
@@ -149,7 +210,7 @@ export default function AlertsScreen() {
                   </View>
                   <Text style={[styles.logMsg, { color: theme.textSecondary }]}>{item.message}</Text>
                 </View>
-              </View>
+              </TouchableOpacity>
             ))
           )}
         </View>
