@@ -6,10 +6,17 @@ export const notFound = (req, res, next) => {
 
 export const errorHandler = (err, req, res, next) => {
   const statusCode = res.statusCode === 200 ? 500 : res.statusCode;
-  console.error(err.stack); // Log it to server console too
-  res.status(statusCode);
-  res.json({
+  if (statusCode >= 500) {
+    console.error(err.stack);
+  }
+
+  const response = {
     message: err.message,
-    stack: err.stack,
-  });
+  };
+
+  if (process.env.NODE_ENV !== 'production') {
+    response.stack = err.stack;
+  }
+
+  res.status(statusCode).json(response);
 };

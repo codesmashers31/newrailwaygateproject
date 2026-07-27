@@ -9,6 +9,8 @@ import { notFound, errorHandler } from './middleware/errorMiddleware.js';
 
 const app = express();
 
+app.set('trust proxy', 1);
+
 // Security & Optimization Middleware
 app.use(helmet());
 app.use(compression());
@@ -34,6 +36,10 @@ app.get('/', (req, res) => {
     environment: process.env.NODE_ENV || 'development',
     timestamp: new Date().toISOString(),
   });
+});
+
+app.get('/favicon.ico', (req, res) => {
+  res.status(204).end();
 });
 
 app.get('/api/health', (req, res) => {
