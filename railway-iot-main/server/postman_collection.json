@@ -1,0 +1,81 @@
+{
+  "info": {
+    "name": "Railway Gate IoT API",
+    "description": "Complete collection of the Smart Railway Gate System APIs for the React Native team.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "1. Register User",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "http://localhost:3000/api/auth/register", "host": ["http://localhost:3000"], "path": ["api", "auth", "register"] },
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Test User\",\n  \"phone\": \"+911111111111\",\n  \"email\": \"test@test.com\",\n  \"role\": \"USER\"\n}", "options": { "raw": { "language": "json" } } }
+          }
+        },
+        {
+          "name": "2. Login (Send OTP)",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "http://localhost:3000/api/auth/login", "host": ["http://localhost:3000"], "path": ["api", "auth", "login"] },
+            "body": { "mode": "raw", "raw": "{\n  \"phone\": \"+919999999999\"\n}", "options": { "raw": { "language": "json" } } }
+          }
+        },
+        {
+          "name": "3. Verify OTP",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "http://localhost:3000/api/auth/verify-otp", "host": ["http://localhost:3000"], "path": ["api", "auth", "verify-otp"] },
+            "body": { "mode": "raw", "raw": "{\n  \"phone\": \"+919999999999\",\n  \"otp\": \"123456\"\n}", "options": { "raw": { "language": "json" } } }
+          }
+        }
+      ]
+    },
+    {
+      "name": "User Profile",
+      "item": [
+        {
+          "name": "Get Profile",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "http://localhost:3000/api/users/profile", "host": ["http://localhost:3000"], "path": ["api", "users", "profile"] },
+            "header": [ { "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" } ]
+          }
+        },
+        {
+          "name": "Update Profile",
+          "request": {
+            "method": "PATCH",
+            "url": { "raw": "http://localhost:3000/api/users/profile", "host": ["http://localhost:3000"], "path": ["api", "users", "profile"] },
+            "header": [ { "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" } ],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"New Name\"\n}", "options": { "raw": { "language": "json" } } }
+          }
+        }
+      ]
+    },
+    {
+      "name": "IoT Simulator (Hardware)",
+      "item": [
+        {
+          "name": "Send OPEN Status",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "http://localhost:3000/api/iot/status", "host": ["http://localhost:3000"], "path": ["api", "iot", "status"] },
+            "body": { "mode": "raw", "raw": "{\n  \"deviceCode\": \"ESP001\",\n  \"status\": \"OPEN\",\n  \"sensorType\": \"REED_SWITCH\"\n}", "options": { "raw": { "language": "json" } } }
+          }
+        },
+        {
+          "name": "Send Heartbeat",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "http://localhost:3000/api/iot/heartbeat", "host": ["http://localhost:3000"], "path": ["api", "iot", "heartbeat"] },
+            "body": { "mode": "raw", "raw": "{\n  \"deviceCode\": \"ESP001\",\n  \"rssi\": -50,\n  \"freeHeap\": 120000\n}", "options": { "raw": { "language": "json" } } }
+          }
+        }
+      ]
+    }
+  ]
+}

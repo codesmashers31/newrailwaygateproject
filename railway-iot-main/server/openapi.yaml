@@ -1,0 +1,87 @@
+openapi: 3.0.0
+info:
+  title: Smart Railway Gate Live Monitoring API
+  version: 1.0.0
+  description: Complete REST API specification for React Native and IoT hardware integration.
+servers:
+  - url: http://localhost:3000/api
+    description: Development Server
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+security:
+  - bearerAuth: []
+paths:
+  /auth/register:
+    post:
+      summary: Register User
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                phone: { type: string }
+                email: { type: string }
+                role: { type: string }
+      responses:
+        '201':
+          description: User created
+  /auth/login:
+    post:
+      summary: Request OTP
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                phone: { type: string }
+      responses:
+        '200':
+          description: OTP sent
+  /gates:
+    get:
+      summary: Get all active gates
+      responses:
+        '200':
+          description: Array of gates
+  /gates/{id}/current-status:
+    get:
+      summary: Get live status of a gate
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Status returned
+  /iot/status:
+    post:
+      summary: Hardware IoT Status Update
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                deviceCode: { type: string }
+                status: { type: string }
+                sensorType: { type: string }
+                source: { type: string }
+                eventTime: { type: string }
+      responses:
+        '201':
+          description: Status logged
