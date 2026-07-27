@@ -12,6 +12,7 @@ import {
   ActivityIndicator,
   Platform,
   RefreshControl,
+  Alert,
 } from 'react-native';
 import { COLORS, TYPOGRAPHY, SHADOWS } from '../theme/theme';
 import { useNavigation } from '../navigation/NavigationContext';
@@ -199,6 +200,8 @@ export default function DashboardScreen({ onNotificationPress }) {
   const [refreshing, setRefreshing] = useState(false);
   const [userName, setUserName] = useState('Rahul Sharma');
   const [favouriteGateIds, setFavouriteGateIds] = useState([]);
+  const [loadingGates, setLoadingGates] = useState(true);
+  const [isFetchingGates, setIsFetchingGates] = useState(false);
 
   const fetchProfile = async () => {
     try {
@@ -215,7 +218,9 @@ export default function DashboardScreen({ onNotificationPress }) {
     }
   };
 
-  const fetchGates = async () => {
+  const fetchGates = async (silent = false) => {
+    if (!silent) setLoadingGates(true);
+    setIsFetchingGates(true);
     try {
       const response = await api.gates.list();
       if (response.data.success) {
@@ -223,19 +228,35 @@ export default function DashboardScreen({ onNotificationPress }) {
       }
     } catch (error) {
       console.warn('Failed to fetch gates:', error);
+    } finally {
+      setLoadingGates(false);
+      setIsFetchingGates(false);
     }
   };
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await Promise.all([fetchGates(), fetchProfile()]);
+    await Promise.all([fetchGates(true), fetchProfile()]);
     setRefreshing(false);
   };
 
+  const handleToggleGateStatus = async (gateId, currentStatus) => {
+    const nextStatus = currentStatus === 'OPEN' ? 'CLOSED' : 'OPEN';
+    try {
+      const response = await api.gates.updateStatus(gateId, nextStatus);
+      if (response.data.success) {
+        await fetchGates(true);
+      }
+    } catch (error) {
+      console.warn('Failed to toggle gate status:', error);
+      Alert.alert('Status Update Failed', error.response?.data?.message || 'Could not update gate status.');
+    }
+  };
+
   useEffect(() => {
-    fetchGates();
+    fetchGates(false);
     fetchProfile();
-    const interval = setInterval(fetchGates, 30000);
+    const interval = setInterval(() => fetchGates(true), 3000); // Check for updates every 3 seconds
 
     return () => clearInterval(interval);
   }, []);
@@ -533,8 +554,23 @@ export default function DashboardScreen({ onNotificationPress }) {
 
   const nearbyGates = activeGates.map((gate) => {
     const dist = getDistance(coords.latitude, coords.longitude, gate.latitude, gate.longitude);
-    const waitingTime = gate.currentStatus === 'OPEN' ? 'Open' : (gate.timerText || 'N/A');
-    const nextTrain = gate.trainName || 'No trains in proximity';
+    
+    // Format dynamic status update date & time directly from database
+    let waitingTime = '';
+    if (gate.lastStatusChangedAt) {
+      const d = new Date(gate.lastStatusChangedAt);
+      const timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+      const day = d.getDate();
+      const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      const monthStr = monthNames[d.getMonth()];
+      waitingTime = `${gate.currentStatus === 'OPEN' ? 'Open since' : 'Closed since'} ${timeStr} (${day} ${monthStr})`;
+    } else {
+      waitingTime = gate.currentStatus === 'OPEN' ? 'Open' : 'Closed';
+    }
+
+    const nextTrain = gate.currentDevice?.deviceCode 
+      ? `Sensor: ${gate.currentDevice.deviceCode}` 
+      : 'No telemetry linked';
     
     return {
       id: gate._id || gate.id,
@@ -546,8 +582,8 @@ export default function DashboardScreen({ onNotificationPress }) {
         ? 'Closed for train passing' 
         : (gate.statusDesc || 'Status unknown'),
       timerText: gate.currentStatus === 'OPEN' ? 'Open' : (gate.timerText || 'N/A'),
-      trainName: gate.trainName || 'No trains in proximity',
-      trainSpeed: gate.trainSpeed || '0 km/h',
+      trainName: nextTrain,
+      trainSpeed: gate.trainSpeed || 'Live data',
       trainDistance: gate.trainDistance || 'N/A',
       avgWait: gate.avgWait || '5m 00s',
       dailyClosures: gate.dailyClosures || '20 times',
@@ -781,13 +817,26 @@ export default function DashboardScreen({ onNotificationPress }) {
 
         {/* NEARBY RAILWAY GATES SECTION */}
         <View style={styles.nearbySectionHeader}>
-          <Text style={[styles.nearbySectionTitle, { color: theme.textPrimary }]}>Nearby Level Crossings</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Text style={[styles.nearbySectionTitle, { color: theme.textPrimary }]}>Nearby Level Crossings</Text>
+            {isFetchingGates && (
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <ActivityIndicator size="small" color="#7C3AED" style={{ marginRight: 6 }} />
+                <Text style={{ fontSize: 11, color: '#7C3AED', fontWeight: 'bold' }}>Syncing Live</Text>
+              </View>
+            )}
+          </View>
           <Text style={[styles.nearbySectionSubtitle, { color: theme.textSecondary }]}>
             Showing nearest gates from your detected/chosen location
           </Text>
         </View>
 
-        {filteredGates.length === 0 ? (
+        {loadingGates ? (
+          <View style={{ paddingVertical: 40, alignItems: 'center', justifyContent: 'center' }}>
+            <ActivityIndicator size="large" color="#7C3AED" />
+            <Text style={{ marginTop: 12, color: theme.textSecondary, fontWeight: '600', fontSize: 13 }}>Syncing with live database...</Text>
+          </View>
+        ) : filteredGates.length === 0 ? (
           <View style={[styles.gateCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
             <Text style={[styles.gateCardName, { color: theme.textPrimary }]}>No live gates found</Text>
             <Text style={[styles.gateCardSub, { color: theme.textSecondary }]}>Pull down to refresh the registered railway gates.</Text>
@@ -855,9 +904,9 @@ export default function DashboardScreen({ onNotificationPress }) {
                 >
                   <MaterialIcons
                     name={isDefault ? 'check-circle' : 'star-border'}
-                    size={16}
+                    size={15}
                     color={isDefault ? '#FFFFFF' : (isDarkMode ? '#94A3B8' : '#64748B')}
-                    style={{ marginRight: 6 }}
+                    style={{ marginRight: 4 }}
                   />
                   <Text style={[
                     styles.actionBtnText,
@@ -868,13 +917,39 @@ export default function DashboardScreen({ onNotificationPress }) {
                 </TouchableOpacity>
 
                 <TouchableOpacity
+                  style={[
+                    styles.actionBtn,
+                    {
+                      backgroundColor: gate.status === 'OPEN' ? 'rgba(239, 68, 68, 0.08)' : 'rgba(16, 185, 129, 0.08)',
+                      borderColor: gate.status === 'OPEN' ? '#EF4444' : '#10B981',
+                      borderWidth: 1
+                    }
+                  ]}
+                  onPress={() => handleToggleGateStatus(gate.id, gate.status)}
+                  activeOpacity={0.7}
+                >
+                  <MaterialIcons
+                    name={gate.status === 'OPEN' ? 'lock' : 'lock-open'}
+                    size={15}
+                    color={gate.status === 'OPEN' ? '#EF4444' : '#10B981'}
+                    style={{ marginRight: 4 }}
+                  />
+                  <Text style={[
+                    styles.actionBtnText,
+                    { color: gate.status === 'OPEN' ? '#EF4444' : '#10B981' }
+                  ]}>
+                    {gate.status === 'OPEN' ? 'Close' : 'Open'}
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
                   style={[styles.actionBtn, styles.chooseGateBtn]}
                   onPress={() => handleChooseGate(gate.id)}
                   activeOpacity={0.7}
                 >
-                  <MaterialIcons name="explore" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
+                  <MaterialIcons name="explore" size={15} color="#FFFFFF" style={{ marginRight: 4 }} />
                   <Text style={[styles.actionBtnText, styles.chooseGateBtnText]}>
-                    Choose This Gate
+                    Choose
                   </Text>
                 </TouchableOpacity>
               </View>

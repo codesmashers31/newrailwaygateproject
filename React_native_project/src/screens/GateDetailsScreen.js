@@ -9,6 +9,7 @@ import {
   Animated,
   Dimensions,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { api } from '../services/api';
 import { COLORS, TYPOGRAPHY, SHADOWS } from '../theme/theme';
@@ -118,7 +119,7 @@ export default function GateDetailsScreen() {
       } catch (err) {
         console.warn('Status poll failed:', err);
       }
-    }, 30000);
+    }, 3000);
 
     return () => {
       active = false;
@@ -131,16 +132,16 @@ export default function GateDetailsScreen() {
     name: gateDetails.gateName,
     location: gateDetails.address || 'Local Road',
     status: gateDetails.currentStatus,
-    statusDesc: gateDetails.currentStatus === 'OPEN' 
+    statusDesc: gateDetails.lastStatusChangedAt
+      ? `${gateDetails.currentStatus === 'OPEN' ? 'Open for road traffic' : 'Closed for train passing'}\nUpdated: ${new Date(gateDetails.lastStatusChangedAt).toLocaleDateString([], { day: '2-digit', month: 'short', year: 'numeric' })}`
+      : gateDetails.currentStatus === 'OPEN' 
       ? 'Open for road traffic' 
       : gateDetails.currentStatus === 'CLOSED' 
       ? 'Closed for train passing' 
       : 'Status unknown',
-    timerText: gateDetails.currentStatus === 'OPEN'
-      ? 'Open'
-      : gateDetails.lastStatusChangedAt
-      ? new Date(gateDetails.lastStatusChangedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      : 'Live',
+    timerText: gateDetails.lastStatusChangedAt
+      ? new Date(gateDetails.lastStatusChangedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })
+      : gateDetails.currentStatus === 'OPEN' ? 'Open' : 'Closed',
     trainName: gateDetails.currentDevice?.deviceCode
       ? `Sensor ${gateDetails.currentDevice.deviceCode} is reporting`
       : 'No linked sensor telemetry',
@@ -263,6 +264,57 @@ export default function GateDetailsScreen() {
               />
             )}
           </View>
+        </View>
+
+        {/* Dynamic Admin/Testing Quick Action to Toggle Gate Status */}
+        <View style={{ alignItems: 'center', marginBottom: 20 }}>
+          <TouchableOpacity
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              backgroundColor: data.status === 'OPEN' ? 'rgba(239, 68, 68, 0.08)' : 'rgba(16, 185, 129, 0.08)',
+              borderColor: data.status === 'OPEN' ? '#EF4444' : '#10B981',
+              borderWidth: 1.5,
+              borderRadius: 20,
+              paddingVertical: 10,
+              paddingHorizontal: 20,
+            }}
+            onPress={async () => {
+              const nextStatus = data.status === 'OPEN' ? 'CLOSED' : 'OPEN';
+              try {
+                setLoading(true);
+                const response = await api.gates.updateStatus(gateId, nextStatus);
+                if (response.data.success) {
+                  // Re-fetch the gate details and history
+                  const [detailsResponse, historyResponse] = await Promise.all([
+                    api.gates.getById(gateId),
+                    api.gates.getHistory(gateId),
+                  ]);
+                  if (detailsResponse.data.success) {
+                    setGateDetails(detailsResponse.data.data);
+                  }
+                  if (historyResponse.data.success) {
+                    setHistory(historyResponse.data.data);
+                  }
+                }
+              } catch (error) {
+                console.warn('Failed to toggle gate status:', error);
+                Alert.alert('Update Failed', error.response?.data?.message || 'Could not toggle gate status.');
+              } finally {
+                setLoading(false);
+              }
+            }}
+          >
+            <MaterialIcons
+              name={data.status === 'OPEN' ? 'lock' : 'lock-open'}
+              size={18}
+              color={data.status === 'OPEN' ? '#EF4444' : '#10B981'}
+              style={{ marginRight: 8 }}
+            />
+            <Text style={{ color: data.status === 'OPEN' ? '#EF4444' : '#10B981', fontWeight: 'bold', fontSize: 14 }}>
+              Quick Action: {data.status === 'OPEN' ? 'Close Gate' : 'Open Gate'}
+            </Text>
+          </TouchableOpacity>
         </View>
 
         {/* Train Tracking Visualizer */}
