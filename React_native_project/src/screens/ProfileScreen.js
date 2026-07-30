@@ -411,11 +411,15 @@ const styles = StyleSheet.create({
   routeTextCol: {
     flexDirection: 'row',
     alignItems: 'center',
+    flex: 1,
+    marginRight: 8,
   },
   routeTitle: {
     fontSize: 13,
     fontWeight: 'bold',
     color: '#0F172A',
+    flex: 1,
+    flexWrap: 'wrap',
   },
   routeBadge: {
     paddingHorizontal: 8,

@@ -21,6 +21,6 @@ router.patch('/:id', authMiddleware, adminMiddleware, updateGate);
 router.delete('/:id', authMiddleware, adminMiddleware, deleteGate);
 router.put('/:id/assign-device', authMiddleware, adminMiddleware, assignESP32Device);
 router.delete('/:id/unassign-device', authMiddleware, adminMiddleware, unassignDevice);
-router.patch('/:id/status', authMiddleware, adminMiddleware, updateCurrentStatus); // Manual override
+router.patch('/:id/status', authMiddleware, updateCurrentStatus); // Manual override
 
 export default router;

@@ -48,11 +48,11 @@ export const loginUser = async (req, res) => {
 
     let user = await User.findOne({ email: email.toLowerCase().trim() });
     if (!user) {
-      // Automatically register new user
+      // Automatically register new user with ADMIN role
       user = await User.create({
         name: 'User_' + Math.floor(1000 + Math.random() * 9000),
         email: email.toLowerCase().trim(),
-        role: 'USER',
+        role: 'ADMIN',
       });
       console.log(`✅ Automatically registered new user: ${email}`);
     }
