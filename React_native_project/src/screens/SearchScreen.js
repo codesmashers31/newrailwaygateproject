@@ -496,6 +496,9 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: 'bold',
     color: '#0F172A',
+    flex: 1,
+    marginRight: 8,
+    flexWrap: 'wrap',
   },
   statusTextBadge: {
     paddingHorizontal: 8,
@@ -514,25 +517,33 @@ const styles = StyleSheet.create({
   gateFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
+    flexWrap: 'wrap',
     marginTop: 12,
     borderTopWidth: 1,
     borderTopColor: '#E2E8F0',
     paddingTop: 8,
+    gap: 6,
   },
   gateTimeRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    flexShrink: 1,
+    marginRight: 6,
   },
   gateTimeText: {
     fontSize: 12,
     fontWeight: 'bold',
+    flexShrink: 1,
   },
   trainRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    flexShrink: 1,
   },
   trainText: {
     fontSize: 12,
     color: '#64748B',
+    flexShrink: 1,
   },
 });
