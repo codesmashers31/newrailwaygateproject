@@ -11,6 +11,7 @@ const mailSender = async (email, title, body) => {
         user: process.env.MAIL_USER || 'bsakthi691@gmail.com',
         pass: process.env.MAIL_PASS || 'gnzhkgsibyzrtwkr',
       },
+      family: 4, // Force IPv4 resolution to prevent ENETUNREACH on Render
       connectionTimeout: 10000, // 10 seconds timeout
       greetingTimeout: 10000,
       socketTimeout: 10000,
