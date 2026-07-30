@@ -108,9 +108,9 @@ export const api = {
   health: () => apiClient.get('/api/health'),
   auth: {
     register: (payload) => apiClient.post('/api/auth/register', payload),
-    login: (phone) => apiClient.post('/api/auth/login', { phone }),
-    verifyOtp: async (phone, otp) => {
-      const response = await apiClient.post('/api/auth/verify-otp', { phone, otp });
+    login: (email) => apiClient.post('/api/auth/login', { email }),
+    verifyOtp: async (email, otp) => {
+      const response = await apiClient.post('/api/auth/verify-otp', { email, otp });
       await saveSession(response.data?.data || {});
       return response;
     },

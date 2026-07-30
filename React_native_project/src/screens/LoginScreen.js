@@ -83,8 +83,9 @@ export default function LoginScreen() {
   }, []);
 
   // Validation functions
-  const validatePhone = (phone) => {
-    return phone.replace(/\D/g, '').length >= 10;
+  const validateEmail = (email) => {
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return re.test(email.toLowerCase());
   };
 
   // Handler for sending OTP
@@ -94,12 +95,12 @@ export default function LoginScreen() {
     const inputClean = loginInput.trim();
 
     if (!inputClean) {
-      setErrorMsg('Please enter your mobile number.');
+      setErrorMsg('Please enter your email address.');
       return;
     }
 
-    if (!validatePhone(inputClean)) {
-      setErrorMsg('Please enter a valid mobile number.');
+    if (!validateEmail(inputClean)) {
+      setErrorMsg('Please enter a valid email address.');
       return;
     }
 
@@ -207,7 +208,7 @@ export default function LoginScreen() {
   };
 
   const handleGoogleLogin = async () => {
-    setErrorMsg('Google sign-in is not enabled on the backend yet. Use mobile OTP to continue.');
+    setErrorMsg('Google sign-in is not enabled on the backend yet. Use email OTP to continue.');
   };
 
   // Interpolated animation styles
@@ -275,24 +276,24 @@ export default function LoginScreen() {
 
               {/* Identifier Input */}
               <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Mobile Number</Text>
+                <Text style={styles.inputLabel}>Email Address</Text>
                 <View 
                   style={[
                     styles.inputBox, 
                     otpSent && styles.inputBoxDisabled
                   ]}
                 >
-                    <Feather name="phone" size={18} color="#818CF8" style={styles.inputIcon} />
+                    <Feather name="mail" size={18} color="#818CF8" style={styles.inputIcon} />
                   
                   <TextInput
                     style={[styles.textInput, otpSent && { color: 'rgba(255, 255, 255, 0.4)' }]}
-                    placeholder="Enter your mobile number"
+                    placeholder="Enter your email address"
                     placeholderTextColor="rgba(255, 255, 255, 0.25)"
                     value={loginInput}
                     onChangeText={(text) => {
                       if (!otpSent) setLoginInput(text);
                     }}
-                    keyboardType="phone-pad"
+                    keyboardType="email-address"
                     autoCapitalize="none"
                     autoCorrect={false}
                     editable={!otpSent}

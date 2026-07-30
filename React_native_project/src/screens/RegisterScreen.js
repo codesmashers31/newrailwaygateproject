@@ -75,13 +75,13 @@ export default function RegisterScreen() {
     setErrorMsg('');
     setSuccessMsg('');
 
-    if (!firstName || !lastName || !phone) {
-      setErrorMsg('First name, last name, and mobile number are required.');
+    if (!firstName || !lastName || !email) {
+      setErrorMsg('First name, last name, and email address are required.');
       return;
     }
 
-    if (email && !email.includes('@')) {
-      setErrorMsg('Invalid email format.');
+    if (!email.includes('@')) {
+      setErrorMsg('Please enter a valid email address.');
       return;
     }
 
@@ -89,7 +89,7 @@ export default function RegisterScreen() {
       setSuccessMsg('Creating account...');
       const response = await api.auth.register({
         name: `${firstName} ${lastName}`,
-        phone: phone.trim(),
+        phone: phone ? phone.trim() : '',
         email: email.trim(),
       });
 
@@ -206,12 +206,12 @@ export default function RegisterScreen() {
 
               {/* Phone Number */}
               <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Phone Number</Text>
+                <Text style={styles.inputLabel}>Phone Number (Optional)</Text>
                 <View style={[styles.inputBox, focusedField === 'phone' && styles.inputBoxFocused]}>
                   <Feather name="phone" size={16} color="#6366F1" style={styles.inputIcon} />
                   <TextInput
                     style={styles.textInput}
-                    placeholder="+91 98765 43210"
+                    placeholder="+91 98765 43210 (Optional)"
                     placeholderTextColor="rgba(255, 255, 255, 0.25)"
                     value={phone}
                     onChangeText={setPhone}

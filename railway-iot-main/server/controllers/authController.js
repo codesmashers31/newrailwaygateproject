@@ -3,6 +3,7 @@ import OTP from '../models/OTP.js';
 import RefreshToken from '../models/RefreshToken.js';
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
+import mailSender from '../utils/mailSender.js';
 
 const sendResponse = (res, statusCode, success, message, data = null, error = null) => {
   const response = { success, message };
@@ -15,13 +16,13 @@ export const registerUser = async (req, res) => {
   try {
     const { name, phone, email, role } = req.body;
 
-    if (!name || !phone) {
-      return sendResponse(res, 400, false, 'Name and phone are required');
+    if (!name || !email) {
+      return sendResponse(res, 400, false, 'Name and email are required');
     }
 
-    const existingUser = await User.findOne({ phone });
+    const existingUser = await User.findOne({ email });
     if (existingUser) {
-      return sendResponse(res, 400, false, 'User with this phone number already exists');
+      return sendResponse(res, 400, false, 'User with this email already exists');
     }
 
     const newUser = await User.create({
@@ -39,13 +40,13 @@ export const registerUser = async (req, res) => {
 
 export const loginUser = async (req, res) => {
   try {
-    const { phone } = req.body;
+    const { email } = req.body;
 
-    if (!phone) {
-      return sendResponse(res, 400, false, 'Phone number is required');
+    if (!email) {
+      return sendResponse(res, 400, false, 'Email is required');
     }
 
-    const user = await User.findOne({ phone });
+    const user = await User.findOne({ email });
     if (!user) {
       return sendResponse(res, 404, false, 'User not found');
     }
@@ -53,26 +54,45 @@ export const loginUser = async (req, res) => {
     const generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
 
     await OTP.create({
-      phone,
+      email,
       otp: generatedOtp,
-      expiresAt: new Date(Date.now() + 60 * 1000), 
+      expiresAt: new Date(Date.now() + 5 * 60 * 1000), // Valid for 5 minutes
     });
 
-    return sendResponse(res, 200, true, 'OTP sent successfully', { otp: generatedOtp }); 
+    // Send email with OTP code using mailSender utility
+    const mailTitle = "Your TrainGateView OTP Verification Code";
+    const mailBody = `
+      <div style="font-family: Arial, sans-serif; padding: 20px; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 8px;">
+        <h2 style="color: #4f46e5; text-align: center;">TrainGateView OTP Verification</h2>
+        <p>Dear ${user.name},</p>
+        <p>You requested a verification code to access your TrainGateView account.</p>
+        <p>Please use the following One-Time Password (OTP) code:</p>
+        <div style="background: #f1f5f9; padding: 15px; font-size: 28px; font-weight: bold; letter-spacing: 4px; text-align: center; border-radius: 8px; color: #4f46e5; margin: 25px 0;">
+          ${generatedOtp}
+        </div>
+        <p style="font-size: 13px; color: #64748b;">This OTP code is valid for 5 minutes. Please do not share it with anyone.</p>
+        <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;" />
+        <p style="font-size: 12px; color: #94a3b8; text-align: center;">TrainGateView App Team</p>
+      </div>
+    `;
+
+    await mailSender(email, mailTitle, mailBody);
+
+    return sendResponse(res, 200, true, 'OTP sent successfully to your email', { otp: generatedOtp }); 
   } catch (error) {
-    return sendResponse(res, 500, false, 'Failed to send OTP', null, error.message);
+    return sendResponse(res, 500, false, 'Failed to send OTP: ' + error.message, null, error.message);
   }
 };
 
 export const verifyOTP = async (req, res) => {
   try {
-    const { phone, otp } = req.body;
+    const { email, otp } = req.body;
 
-    if (!phone || !otp) {
-      return sendResponse(res, 400, false, 'Phone and OTP are required');
+    if (!email || !otp) {
+      return sendResponse(res, 400, false, 'Email and OTP are required');
     }
 
-    const otpRecord = await OTP.findOne({ phone, otp, verified: false });
+    const otpRecord = await OTP.findOne({ email, otp, verified: false });
 
     if (!otpRecord || otpRecord.expiresAt < new Date()) {
       return sendResponse(res, 400, false, 'Invalid or expired OTP');
@@ -81,7 +101,7 @@ export const verifyOTP = async (req, res) => {
     otpRecord.verified = true;
     await otpRecord.save();
 
-    const user = await User.findOne({ phone });
+    const user = await User.findOne({ email });
     user.lastLoginAt = new Date();
     await user.save();
 

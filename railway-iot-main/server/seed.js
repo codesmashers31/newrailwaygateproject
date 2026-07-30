@@ -13,7 +13,7 @@ const seedDatabase = async () => {
     console.log('Seeding Database (Idempotent)...');
 
     // 1. Seed Default Admin User
-    const existingAdmin = await User.findOne({ phone: '+919999999999' });
+    const existingAdmin = await User.findOne({ email: 'admin@railwayiot.local' });
     if (!existingAdmin) {
       await User.create({
         name: 'System Admin',
@@ -21,7 +21,7 @@ const seedDatabase = async () => {
         email: 'admin@railwayiot.local',
         role: 'ADMIN',
       });
-      console.log('✅ Created Default Admin User (Phone: +919999999999)');
+      console.log('✅ Created Default Admin User (Email: admin@railwayiot.local)');
     } else {
       console.log('➡️ Default Admin User already exists');
     }

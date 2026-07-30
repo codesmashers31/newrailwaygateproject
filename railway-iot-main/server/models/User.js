@@ -29,19 +29,19 @@ const userSchema = new mongoose.Schema(
       required: [true, 'Name is required'],
       trim: true,
     },
-    // Unique phone number used for login and OTP verification
+    // Optional phone number
     phone: {
       type: String,
-      required: [true, 'Phone number is required'],
-      unique: true,
       trim: true,
-      index: true,
     },
-    // Optional email address
+    // Unique email address used for login and OTP verification
     email: {
       type: String,
+      required: [true, 'Email is required'],
+      unique: true,
       trim: true,
       lowercase: true,
+      index: true,
     },
     // Optional password, keeping the door open for future traditional authentication
     password: {

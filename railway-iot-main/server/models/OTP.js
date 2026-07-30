@@ -20,11 +20,12 @@ import mongoose from 'mongoose';
 
 const otpSchema = new mongoose.Schema(
   {
-    // The target phone number the OTP was sent to
-    phone: {
+    // The target email address the OTP was sent to
+    email: {
       type: String,
       required: true,
       trim: true,
+      lowercase: true,
       index: true,
     },
     // The randomly generated passcode
