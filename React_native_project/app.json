@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "TrainGateView",
-    "slug": "TrainGateView",
+    "name": "GateWatch",
+    "slug": "GateWatch",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",

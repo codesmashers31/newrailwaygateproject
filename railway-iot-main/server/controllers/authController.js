@@ -78,7 +78,7 @@ export const loginUser = async (req, res) => {
         </div>
         <p style="font-size: 13px; color: #64748b;">This OTP code is valid for 5 minutes. Please do not share it with anyone.</p>
         <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;" />
-        <p style="font-size: 12px; color: #94a3b8; text-align: center;">TrainGateView App Team</p>
+        <p style="font-size: 12px; color: #94a3b8; text-align: center;">GateWatch App Team</p>
       </div>
     `;
 

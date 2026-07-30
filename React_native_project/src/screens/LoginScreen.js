@@ -259,7 +259,7 @@ export default function LoginScreen() {
                   resizeMode="cover"
                 />
               </View>
-              <Text style={styles.titleText}>TrainGateView</Text>
+              <Text style={styles.titleText}>GateWatch</Text>
             </View>
 
             {/* Glassmorphic Login Form Card */}
@@ -506,6 +506,14 @@ const styles = StyleSheet.create({
   logo: {
     width: '100%',
     height: '100%',
+  },
+  titleText: {
+    fontSize: isSmallScreen ? 22 : 26,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    marginTop: 10,
+    letterSpacing: 0.5,
+    textAlign: 'center',
   },
   titleRow: {
     flexDirection: 'row',

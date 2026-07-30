@@ -172,7 +172,7 @@ export default function WelcomeScreen() {
               resizeMode="cover"
             />
           </View>
-          <Text style={styles.title}>TrainGateView</Text>
+          <Text style={styles.title}>GateWatch</Text>
           <Text style={styles.subtitle}>Smart Railway Crossing Alerts</Text>
         </View>
 

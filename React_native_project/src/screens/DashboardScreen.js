@@ -631,7 +631,7 @@ export default function DashboardScreen({ onNotificationPress }) {
                   resizeMode="contain"
                 />
               </View>
-              <Text style={styles.brandText}>TrainGateView</Text>
+              <Text style={styles.brandText}>GateWatch</Text>
             </View>
           </View>
 

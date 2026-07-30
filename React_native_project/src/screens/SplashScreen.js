@@ -96,7 +96,7 @@ export default function SplashScreen() {
           },
         ]}
       >
-        <Text style={styles.title}>TrainGateView</Text>
+        <Text style={styles.title}>GateWatch</Text>
         <Text style={styles.subtitle}>Smart Railway Crossing Alerts</Text>
       </Animated.View>
 

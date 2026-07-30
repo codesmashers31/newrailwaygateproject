@@ -135,7 +135,7 @@ export default function RegisterScreen() {
                   resizeMode="cover"
                 />
               </View>
-              <Text style={styles.titleText}>TrainGateView</Text>
+              <Text style={styles.titleText}>GateWatch</Text>
             </View>
 
             {/* Glowing Glass Card */}
@@ -421,9 +421,9 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   titleText: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: '800',
-    color: '#fff',
+    color: '#FFFFFF',
     letterSpacing: 0.5,
   },
   glassCard: {
