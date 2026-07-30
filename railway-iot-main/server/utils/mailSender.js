@@ -6,14 +6,14 @@ const mailSender = async (email, title, body) => {
     let transporter = nodemailer.createTransport({
       service: process.env.MAIL_SERVICE || 'gmail', // defaults to gmail, set MAIL_SERVICE in .env if needed
       auth: {
-        user: process.env.MAIL_USER,
-        pass: process.env.MAIL_PASS,
+        user: process.env.MAIL_USER || 'bsakthi691@gmail.com',
+        pass: process.env.MAIL_PASS || 'gnzhkgsibyzrtwkr',
       }
     });
 
     // Send emails to users
     let info = await transporter.sendMail({
-      from: process.env.MAIL_USER || 'OTP Service <noreply@yourdomain.com>',
+      from: process.env.MAIL_USER || 'bsakthi691@gmail.com',
       to: email,
       subject: title,
       html: body,
