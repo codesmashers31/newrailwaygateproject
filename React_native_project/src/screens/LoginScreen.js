@@ -118,8 +118,17 @@ export default function LoginScreen() {
         setOtpSent(true);
         setCountdown(60);
         
-        // Set user feedback message
-        setSuccessMsg('OTP generated. Enter the 6-digit code to continue.');
+        // Set user feedback message from backend
+        const serverSuccessMsg = response.data.message || 'OTP generated. Enter the 6-digit code to continue.';
+        setSuccessMsg(serverSuccessMsg);
+
+        // Auto-fill OTP boxes if returned in response (e.g. when Render blocks SMTP)
+        if (response.data.data?.otp) {
+          const codeStr = String(response.data.data.otp);
+          if (codeStr.length === 6) {
+            setOtp(codeStr.split(''));
+          }
+        }
 
         // Smoothly animate in the OTP section
         Animated.spring(otpAnim, {
@@ -128,8 +137,8 @@ export default function LoginScreen() {
           tension: 40,
           useNativeDriver: true,
         }).start(() => {
-          // Focus the first OTP box
-          if (otpRefs.current[0]) {
+          // Focus the first OTP box if not auto-filled
+          if (!response.data.data?.otp && otpRefs.current[0]) {
             otpRefs.current[0].focus();
           }
         });
