@@ -46,9 +46,15 @@ export const loginUser = async (req, res) => {
       return sendResponse(res, 400, false, 'Email is required');
     }
 
-    const user = await User.findOne({ email });
+    let user = await User.findOne({ email: email.toLowerCase().trim() });
     if (!user) {
-      return sendResponse(res, 404, false, 'User not found');
+      // Automatically register new user
+      user = await User.create({
+        name: 'User_' + Math.floor(1000 + Math.random() * 9000),
+        email: email.toLowerCase().trim(),
+        role: 'USER',
+      });
+      console.log(`✅ Automatically registered new user: ${email}`);
     }
 
     const generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();

@@ -255,8 +255,8 @@ export default function LoginScreen() {
 
             {/* Glassmorphic Login Form Card */}
             <View style={styles.glassCard}>
-              <Text style={styles.welcomeTitle}>Welcome Back</Text>
-              <Text style={styles.welcomeSubtitle}>Sign in to trace active crossings</Text>
+              <Text style={styles.welcomeTitle}>Welcome</Text>
+              <Text style={styles.welcomeSubtitle}>Enter your email to continue</Text>
 
               {/* Success / Error Alerts */}
               {errorMsg ? (
@@ -443,9 +443,7 @@ export default function LoginScreen() {
                 <Text style={styles.googleBtnText}>Continue with Google</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity onPress={() => navigate('REGISTER')} style={{ marginTop: 20, alignItems: 'center' }}>
-                <Text style={{ color: '#C4B5FD', fontSize: 13, fontWeight: '700' }}>New here? Create an account</Text>
-              </TouchableOpacity>
+
             </View>
           </ScrollView>
         </KeyboardAvoidingView>
