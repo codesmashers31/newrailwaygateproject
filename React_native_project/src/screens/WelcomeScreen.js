@@ -167,7 +167,7 @@ export default function WelcomeScreen() {
         <View style={styles.brandContainer}>
           <View style={styles.logoCircle}>
             <Image
-              source={require('../../assets/logo.jpg')}
+              source={require('../../assets/logo.png')}
               style={styles.logo}
               resizeMode="cover"
             />

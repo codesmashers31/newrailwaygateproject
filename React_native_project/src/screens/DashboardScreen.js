@@ -626,7 +626,7 @@ export default function DashboardScreen({ onNotificationPress }) {
             <View style={[styles.brandRow, { backgroundColor: theme.card, borderColor: theme.border }]}>
               <View style={styles.logoWrapper}>
                 <Image
-                  source={require('../../assets/logo.jpg')}
+                  source={require('../../assets/logo.png')}
                   style={styles.logo}
                   resizeMode="contain"
                 />
@@ -1352,18 +1352,23 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 8,
   },
   gateStatItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    flex: 1,
+    flexShrink: 1,
+    marginRight: 6,
   },
   gateStatVal: {
     fontSize: 12,
     fontWeight: 'bold',
+    flexShrink: 1,
   },
   gateStatText: {
     fontSize: 12,
+    flexShrink: 1,
   },
   actionsBtnContainer: {
     flexDirection: 'row',
