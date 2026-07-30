@@ -82,11 +82,19 @@ export const loginUser = async (req, res) => {
       </div>
     `;
 
-    await mailSender(email, mailTitle, mailBody);
-
-    return sendResponse(res, 200, true, 'OTP sent successfully to your email', { otp: generatedOtp }); 
+    try {
+      await mailSender(email, mailTitle, mailBody);
+      return sendResponse(res, 200, true, 'OTP sent successfully to your email', { otp: generatedOtp }); 
+    } catch (mailError) {
+      console.error('SMTP failed, falling back to response-returned OTP:', mailError.message);
+      // Return the OTP in response since SMTP ports are blocked on Render Free tier
+      return sendResponse(res, 200, true, `OTP generated (Email failed: ${mailError.message}). Fallback OTP: ${generatedOtp}`, { 
+        otp: generatedOtp,
+        note: 'SMTP is blocked on Render Free tier. This OTP is returned directly for testing.'
+      });
+    }
   } catch (error) {
-    return sendResponse(res, 500, false, 'Failed to send OTP: ' + error.message, null, error.message);
+    return sendResponse(res, 500, false, 'Failed to process login: ' + error.message, null, error.message);
   }
 };
 
