@@ -5,16 +5,16 @@ const mailSender = async (email, title, body) => {
     // Create a Transporter to send emails
     let transporter = nodemailer.createTransport({
       host: 'smtp.gmail.com',
-      port: 465,
-      secure: true, // true for 465, false for other ports
+      port: 587,
+      secure: false, // true for 465, false for 587 (STARTTLS)
       auth: {
         user: process.env.MAIL_USER || 'bsakthi691@gmail.com',
         pass: process.env.MAIL_PASS || 'gnzhkgsibyzrtwkr',
       },
       family: 4, // Force IPv4 resolution to prevent ENETUNREACH on Render
-      connectionTimeout: 10000, // 10 seconds timeout
-      greetingTimeout: 10000,
-      socketTimeout: 10000,
+      connectionTimeout: 15000, // 15 seconds timeout
+      greetingTimeout: 15000,
+      socketTimeout: 15000,
     });
 
     // Send emails to users
