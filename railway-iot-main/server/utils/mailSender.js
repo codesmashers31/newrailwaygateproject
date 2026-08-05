@@ -9,31 +9,27 @@ const mailSender = async (email, title, body) => {
 
   // 1. Try Brevo HTTP API (Port 443 - Sends to ANY email address on free tier)
   if (brevoKey) {
-    try {
-      console.log(`Sending email via Brevo HTTP API to ${email}...`);
-      const res = await fetch('https://api.brevo.com/v3/smtp/email', {
-        method: 'POST',
-        headers: {
-          'accept': 'application/json',
-          'api-key': brevoKey,
-          'content-type': 'application/json',
-        },
-        body: JSON.stringify({
-          sender: { name: 'GateWatch', email: process.env.MAIL_USER || 'bsakthi691@gmail.com' },
-          to: [{ email: email }],
-          subject: title,
-          htmlContent: body,
-        }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        console.log('✅ Brevo email sent successfully:', data);
-        return data;
-      }
-      console.warn('⚠️ Brevo API returned error:', data.message || data);
-    } catch (e) {
-      console.warn('⚠️ Brevo fetch failed:', e.message);
+    console.log(`Sending email via Brevo HTTP API to ${email}...`);
+    const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: {
+        'accept': 'application/json',
+        'api-key': brevoKey,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        sender: { name: 'GateWatch', email: process.env.MAIL_USER || 'bsakthi691@gmail.com' },
+        to: [{ email: email }],
+        subject: title,
+        htmlContent: body,
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.message || 'Brevo API error');
     }
+    console.log('✅ Brevo email sent successfully:', data);
+    return data;
   }
 
   // 2. Try Resend HTTP API (Port 443 - Note: free test key only sends to account owner email)
