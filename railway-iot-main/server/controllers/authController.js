@@ -66,12 +66,12 @@ export const loginUser = async (req, res) => {
     });
 
     // Send email with OTP code using mailSender utility
-    const mailTitle = "Your TrainGateView OTP Verification Code";
+    const mailTitle = "Your GateWatch OTP Verification Code";
     const mailBody = `
       <div style="font-family: Arial, sans-serif; padding: 20px; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 8px;">
-        <h2 style="color: #4f46e5; text-align: center;">TrainGateView OTP Verification</h2>
+        <h2 style="color: #4f46e5; text-align: center;">GateWatch OTP Verification</h2>
         <p>Dear ${user.name},</p>
-        <p>You requested a verification code to access your TrainGateView account.</p>
+        <p>You requested a verification code to access your GateWatch account.</p>
         <p>Please use the following One-Time Password (OTP) code:</p>
         <div style="background: #f1f5f9; padding: 15px; font-size: 28px; font-weight: bold; letter-spacing: 4px; text-align: center; border-radius: 8px; color: #4f46e5; margin: 25px 0;">
           ${generatedOtp}

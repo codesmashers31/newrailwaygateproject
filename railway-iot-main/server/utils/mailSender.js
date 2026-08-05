@@ -13,7 +13,7 @@ const mailSender = async (email, title, body) => {
           'content-type': 'application/json',
         },
         body: JSON.stringify({
-          sender: { name: 'TrainGateView', email: process.env.MAIL_USER || 'bsakthi691@gmail.com' },
+          sender: { name: 'GateWatch', email: process.env.MAIL_USER || 'bsakthi691@gmail.com' },
           to: [{ email: email }],
           subject: title,
           htmlContent: body,
@@ -36,7 +36,7 @@ const mailSender = async (email, title, body) => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          from: 'TrainGateView <onboarding@resend.dev>',
+          from: 'GateWatch <onboarding@resend.dev>',
           to: [email],
           subject: title,
           html: body,
