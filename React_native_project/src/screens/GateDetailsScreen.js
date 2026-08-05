@@ -119,7 +119,7 @@ export default function GateDetailsScreen() {
       } catch (err) {
         console.warn('Status poll failed:', err);
       }
-    }, 3000);
+    }, 15000);
 
     return () => {
       active = false;

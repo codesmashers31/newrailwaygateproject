@@ -256,7 +256,7 @@ export default function DashboardScreen({ onNotificationPress }) {
   useEffect(() => {
     fetchGates(false);
     fetchProfile();
-    const interval = setInterval(() => fetchGates(true), 3000); // Check for updates every 3 seconds
+    const interval = setInterval(() => fetchGates(true), 15000); // Check for updates every 15 seconds
 
     return () => clearInterval(interval);
   }, []);
