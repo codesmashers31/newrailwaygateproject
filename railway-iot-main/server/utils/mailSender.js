@@ -9,35 +9,7 @@ const mailSender = async (email, title, body) => {
   const resendKey = process.env.RESEND_API_KEY || defaultResendKey;
   const brevoKey = process.env.BREVO_API_KEY;
 
-  // 1. Try Resend HTTP API (Port 443 - Primary transport for Cloud / Render)
-  if (resendKey) {
-    try {
-      console.log(`Sending email via Resend HTTP API to ${email}...`);
-      const res = await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${resendKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          from: 'GateWatch <onboarding@resend.dev>',
-          to: [email],
-          subject: title,
-          html: body,
-        }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        console.log('✅ Resend email sent successfully:', data);
-        return data;
-      }
-      console.warn('⚠️ Resend API returned error:', data.message || data);
-    } catch (e) {
-      console.warn('⚠️ Resend send failed:', e.message);
-    }
-  }
-
-  // 2. Try Brevo HTTP API (Port 443)
+  // 1. Try Brevo HTTP API (Priority 1 if BREVO_API_KEY is configured on Render)
   if (brevoKey) {
     try {
       console.log(`Sending email via Brevo HTTP API to ${email}...`);
@@ -63,6 +35,34 @@ const mailSender = async (email, title, body) => {
       console.warn('⚠️ Brevo API returned error:', data.message || data);
     } catch (e) {
       console.warn('⚠️ Brevo fetch failed:', e.message);
+    }
+  }
+
+  // 2. Try Resend HTTP API (Priority 2 / Fallback for Cloud / Render)
+  if (resendKey) {
+    try {
+      console.log(`Sending email via Resend HTTP API to ${email}...`);
+      const res = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${resendKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          from: 'GateWatch <onboarding@resend.dev>',
+          to: [email],
+          subject: title,
+          html: body,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        console.log('✅ Resend email sent successfully:', data);
+        return data;
+      }
+      console.warn('⚠️ Resend API returned error:', data.message || data);
+    } catch (e) {
+      console.warn('⚠️ Resend send failed:', e.message);
     }
   }
 
