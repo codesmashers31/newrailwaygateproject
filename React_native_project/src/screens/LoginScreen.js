@@ -112,9 +112,16 @@ export default function LoginScreen() {
         Animated.spring(logoScale, { toValue: 1, friction: 3, useNativeDriver: true }),
       ]).start();
 
-      const response = await api.auth.login(inputClean);
+      let response;
+      try {
+        response = await api.auth.login(inputClean);
+      } catch (firstErr) {
+        console.log('Login attempt 1 failed (Render cold start?), retrying in 1.5s...', firstErr.message);
+        await new Promise((r) => setTimeout(r, 1500));
+        response = await api.auth.login(inputClean);
+      }
 
-      if (response.data.success) {
+      if (response.data?.success) {
         setOtpSent(true);
         setCountdown(60);
         
@@ -144,7 +151,7 @@ export default function LoginScreen() {
         });
       }
     } catch (err) {
-      const serverMsg = err.response?.data?.message || 'Network issue encountered. Check your connection.';
+      const serverMsg = err.response?.data?.message || err.message || 'Network issue encountered. Check your connection.';
       setErrorMsg(serverMsg);
     } finally {
       setLoading(false);
